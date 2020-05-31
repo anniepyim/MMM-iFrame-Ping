@@ -34,10 +34,10 @@ start: function () {
 		this.IntervalID = 0;
 		this.PING_OK = false;
 		this.lastPingOK = null; //init at now dans le node_helper
-				
+
 		//data load once at start-up
 		this.iframeLoad();
-		
+
 		//ping request to ensure the target it reachable, only if yes the iFrame will be displayed
 		this.sendSocketNotification('PING_REQUEST', this.config.url);
 				                               
@@ -47,6 +47,16 @@ start: function () {
 				self.sendSocketNotification('PING_REQUEST', self.config.url);
 			}, this.config.updateInterval * 60 * 1000);    
 		}
+
+        let modules = MM.getModules();
+		if (typeof modules === "undefined") { return; }
+		modules.forEach((mod) => {
+			if (mod.hidden && mod.name !== "MMM-iFrame-Ping") {
+				mod.show(1000);
+			} else if (!mod.hidden && mod.name === "MMM-iFrame-Ping"){
+				mod.hide(1000);
+			}
+		});
 
 }, //end start function
   
@@ -142,42 +152,72 @@ iframeLoad: function() {
 
 socketNotificationReceived: function(notification, payload) {
 
-  var self = this;
+	var self = this;
 	
-  if (notification === 'PING_RESPONSE') {
-	  
+	if (notification === 'PING_RESPONSE') {
+
 	if(this.config.logDebug){
 	  Log.info('received notification : ' + notification);
 	}
 
-	if(payload){  
-		  
+	if(payload){
+
 		this.payload = payload;
 		self.lastPingOK = this.payload.lastConnection; //in s. Memorize the date and time of the last successfull PING
-		
+
 		if(this.payload.status === "ERROR"){
-			
+
 			if(this.config.logDebug){
-				Log.log("No PING since : " + moment(self.lastPingOK).format('dd - HH:mm:ss'));		
+				Log.log("No PING since : " + moment(self.lastPingOK).format('dd - HH:mm:ss'));
 			}
-			
-			self.PING_OK = false;			
-		
+
+			self.PING_OK = false;
+
 		}else{
-			
+
 			if(this.config.logDebug){
 				Log.log("PING OK at " + moment(self.lastPingOK).format('dd - HH:mm:ss'));
 			}
-			
+
 			self.PING_OK = true;
-			
+
 		}
-		
+
 		self.updateDom(1000); //update the Dom with the PING answer infos
-		
+
 	  }//end if payload
-	  
-  }//end notification = PING_RESPONSE
+
+	};//end notification = PING_RESPONSE
+
+	if (notification === 'LOAD_VIDEO'){
+
+		let modules = MM.getModules();
+		if (typeof modules === "undefined") { return; }
+		modules.forEach((mod) => {
+			if (!mod.hidden && mod.name !== "MMM-iFrame-Ping") {
+				mod.hide(1000);
+			} else if (mod.hidden && mod.name === "MMM-iFrame-Ping"){
+				mod.show(1000);
+			};
+		});
+
+		self.sendSocketNotification('PING_REQUEST', self.config.url);
+		self.config.url = payload
+		self.iframeLoad();
+	}
+
+	if (notification === 'STOP_VIDEO'){
+
+		let modules = MM.getModules();
+		if (typeof modules === "undefined") { return; }
+		modules.forEach((mod) => {
+			if (mod.hidden && mod.name !== "MMM-iFrame-Ping") {
+				mod.show(1000);
+			} else if (!mod.hidden && mod.name === "MMM-iFrame-Ping"){
+				mod.hide(1000);
+			}
+		});
+	}
 },
 
 // Override dom generator.
